@@ -1,33 +1,27 @@
 package ecommerce.dtos;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
+
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Data
-public class ProductRequestDTO {
+public class ProductDto {
 
-    @NotBlank
+    private Long id;
     private String name;
-
     private String description;
-
-    @NotNull
     private BigDecimal price;
-
-    @NotNull
     private Integer quantityAvailable;
-
     private String brand;
-
     private String category;
-
     private String sku;
-
+    private Double rating;
     private String imageUrl;
-
     private Boolean isActive;
+    private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
+    private Long userId;
+    private byte[] imageData;
 }
-

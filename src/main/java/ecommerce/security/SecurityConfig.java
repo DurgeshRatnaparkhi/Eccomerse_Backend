@@ -26,23 +26,35 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
-                        // ✅ Public endpoints (accessible without token)
+
+                        // Allow Angular preflight
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                        // ❗ PUBLIC image URLs
+                        .requestMatchers(HttpMethod.GET, "/images/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/admin/products/getProductImage/**").permitAll()
+
+                        // Public auth API
                         .requestMatchers(
                                 "/api/auth/register",
                                 "/api/auth/login",
                                 "/api/auth/forgot-password/**"
                         ).permitAll()
+                        // USER CART URLs
+                        .requestMatchers("/api/cart/**").hasRole("USER")
 
-                        // ✅ Role-based endpoints
+                        .requestMatchers("/api/public/**").permitAll()
+
+
+                        // Role-based
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/user/**").hasRole("USER")
 
-                        // ✅ Any other API requires authentication
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -63,19 +75,18 @@ public class SecurityConfig {
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
+
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOriginPatterns(Arrays.asList("http://localhost:4200"));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
+        configuration.setAllowedMethods(Arrays.asList("GET","POST","PUT","DELETE","PATCH","OPTIONS"));
 
-        //  Fix: Allow ALL headers
+        // Allow any headers + JWT
         configuration.addAllowedHeader("*");
-
-        // Allow sending token (JWT)
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
+
         return source;
     }
-
 }
