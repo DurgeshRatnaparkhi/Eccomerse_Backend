@@ -13,15 +13,16 @@ import ecommerce.repo.ProductRepository;
 import ecommerce.repo.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.List;
 
-
 @Service
 @RequiredArgsConstructor
 @Transactional
+@Slf4j
 public class CartService {
 
     private final CartRepository cartRepo;
@@ -29,7 +30,10 @@ public class CartService {
     private final ProductRepository productRepo;
     private final UserRepository userRepo;
 
+    // ========================= ADD TO CART =========================
     public CartResponseDTO addToCart(String email, AddToCartRequest request) {
+
+        log.info("Add to cart request for email={}, productId={}", email, request.getProductId());
 
         User user = userRepo.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -37,17 +41,17 @@ public class CartService {
         Product product = productRepo.findById(request.getProductId())
                 .orElseThrow(() -> new RuntimeException("Product not found"));
 
-        Cart cart = cartRepo.findByUser(user);
+        // ✅ Cart may or may not exist
+        Cart cart = cartRepo.findByUser(user).orElse(null);
 
-        // ✅ Create cart if not exists
         if (cart == null) {
+            log.info("Cart not found, creating new cart for userId={}", user.getId());
             cart = new Cart();
             cart.setUser(user);
             cart.setTotalAmount(BigDecimal.ZERO);
             cart = cartRepo.save(cart);
         }
 
-        // ✅ Find existing cart item
         CartItem cartItem = cartItemRepo
                 .findByCartAndProduct(cart, product)
                 .orElse(null);
@@ -69,26 +73,22 @@ public class CartService {
 
         cartItemRepo.save(cartItem);
 
-        // ✅ Recalculate cart total
-        BigDecimal total = cartItemRepo.findByCart(cart).stream()
-                .map(CartItem::getTotalPrice)
-                .reduce(BigDecimal.ZERO, BigDecimal::add );
+        updateCartTotal(cart);
 
-        cart.setTotalAmount(total);
-        cartRepo.save(cart);
-
-        // ✅ Convert ENTITY → DTO (MOST IMPORTANT PART)
+        log.info("Product added to cart successfully for userId={}", user.getId());
         return mapToCartResponse(cart);
     }
 
+    // ========================= GET USER CART =========================
     public CartResponseDTO getUserCart(String email) {
 
         User user = userRepo.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        Cart cart = cartRepo.findByUser(user);
+        Cart cart = cartRepo.findByUser(user).orElse(null);
 
         if (cart == null) {
+            log.info("No cart found for userId={}", user.getId());
             CartResponseDTO empty = new CartResponseDTO();
             empty.setTotalAmount(BigDecimal.ZERO);
             empty.setItems(List.of());
@@ -98,37 +98,14 @@ public class CartService {
         return mapToCartResponse(cart);
     }
 
-    // 🔥 Mapper method (ENTITY → DTO)
-    private CartResponseDTO mapToCartResponse(Cart cart) {
-
-        CartResponseDTO response = new CartResponseDTO();
-        response.setCartId(cart.getId());
-        response.setTotalAmount(cart.getTotalAmount());
-
-        List<CartItemDTO> items = cartItemRepo.findByCart(cart).stream().map(item -> {
-            CartItemDTO dto = new CartItemDTO();
-            dto.setProductId(item.getProduct().getId());
-            dto.setProductName(item.getProduct().getName());
-            dto.setPrice(item.getPrice());
-            dto.setQuantity(item.getQuantity());
-            dto.setTotalPrice(item.getTotalPrice());
-            return dto;
-        }).toList();
-
-        response.setItems(items);
-        return response;
-    }
-
-
+    // ========================= INCREASE QUANTITY =========================
     public CartResponseDTO increaseQuantity(String email, Long productId) {
 
         User user = userRepo.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        Cart cart = cartRepo.findByUser(user);
-        if (cart == null) {
-            throw new RuntimeException("Cart not found");
-        }
+        Cart cart = cartRepo.findByUser(user)
+                .orElseThrow(() -> new RuntimeException("Cart not found"));
 
         Product product = productRepo.findById(productId)
                 .orElseThrow(() -> new RuntimeException("Product not found"));
@@ -144,18 +121,18 @@ public class CartService {
         cartItemRepo.save(cartItem);
         updateCartTotal(cart);
 
+        log.info("Quantity increased for productId={} userId={}", productId, user.getId());
         return mapToCartResponse(cart);
     }
 
+    // ========================= DECREASE QUANTITY =========================
     public CartResponseDTO decreaseQuantity(String email, Long productId) {
 
         User user = userRepo.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        Cart cart = cartRepo.findByUser(user);
-        if (cart == null) {
-            throw new RuntimeException("Cart not found");
-        }
+        Cart cart = cartRepo.findByUser(user)
+                .orElseThrow(() -> new RuntimeException("Cart not found"));
 
         Product product = productRepo.findById(productId)
                 .orElseThrow(() -> new RuntimeException("Product not found"));
@@ -165,6 +142,7 @@ public class CartService {
 
         if (cartItem.getQuantity() == 1) {
             cartItemRepo.delete(cartItem);
+            log.info("Item removed from cart productId={} userId={}", productId, user.getId());
         } else {
             cartItem.setQuantity(cartItem.getQuantity() - 1);
             cartItem.setTotalPrice(
@@ -177,8 +155,9 @@ public class CartService {
         return mapToCartResponse(cart);
     }
 
-    // ♻ common method
+    // ========================= COMMON METHODS =========================
     private void updateCartTotal(Cart cart) {
+
         BigDecimal total = cartItemRepo.findByCart(cart).stream()
                 .map(CartItem::getTotalPrice)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -187,4 +166,25 @@ public class CartService {
         cartRepo.save(cart);
     }
 
+    // ========================= ENTITY → DTO =========================
+    private CartResponseDTO mapToCartResponse(Cart cart) {
+
+        CartResponseDTO response = new CartResponseDTO();
+        response.setCartId(cart.getId());
+        response.setTotalAmount(cart.getTotalAmount());
+
+        List<CartItemDTO> items = cartItemRepo.findByCart(cart).stream()
+                .map(item -> {
+                    CartItemDTO dto = new CartItemDTO();
+                    dto.setProductId(item.getProduct().getId());
+                    dto.setProductName(item.getProduct().getName());
+                    dto.setPrice(item.getPrice());
+                    dto.setQuantity(item.getQuantity());
+                    dto.setTotalPrice(item.getTotalPrice());
+                    return dto;
+                }).toList();
+
+        response.setItems(items);
+        return response;
+    }
 }

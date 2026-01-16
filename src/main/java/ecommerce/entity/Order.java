@@ -5,6 +5,7 @@ import lombok.Data;
 import java.time.LocalDateTime;
 import java.util.List;
 
+
 @Entity
 @Data
 @Table(name = "orders")
@@ -14,18 +15,22 @@ public class Order {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne
-    private User user;
+    private Double totalAmount;
 
-    private Double orderAmount;
-
-    private String orderStatus;   // PENDING, CONFIRMED, SHIPPED, DELIVERED
-    private String paymentStatus; // PENDING, SUCCESS, FAILED
-
-    private String paymentId;     // Razorpay payment id
+    private String status;          // PLACED, SHIPPED, DELIVERED
+    private String paymentStatus;   // PENDING, SUCCESS, FAILED
+    private String paymentId;
 
     private LocalDateTime orderDate;
 
-    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL)
-    private List<OrderItem> orderItems;
+    @ManyToOne
+    @JoinColumn(name = "address_id")
+    private Address address;
+
+    @ManyToOne
+    @JoinColumn(name = "user_id")
+    private User user;
+
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<OrderItem> items;
 }
