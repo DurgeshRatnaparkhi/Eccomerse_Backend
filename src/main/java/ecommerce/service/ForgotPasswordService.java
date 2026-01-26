@@ -2,6 +2,7 @@ package ecommerce.service;
 
 import ecommerce.entity.PasswordResetToken;
 import ecommerce.entity.User;
+import ecommerce.exception.EmailNotFoundException;
 import ecommerce.repo.PasswordResetTokenRepository;
 import ecommerce.repo.UserRepository;
 import jakarta.transaction.Transactional;
@@ -33,7 +34,7 @@ public class ForgotPasswordService {
         email = email.toLowerCase();
 
         userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Email not registered"));
+                .orElseThrow(() -> new EmailNotFoundException("Email not registered"));
 
         // Always 6-digit OTP
         String otp = String.format("%06d", new Random().nextInt(999999));
