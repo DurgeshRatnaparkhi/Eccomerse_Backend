@@ -42,6 +42,6 @@ public class AuthController {
             Map<String, String> error = new HashMap<>();
             error.put("error", e.getMessage());
             return ResponseEntity.badRequest().body(error);
-        }
+        } 
     }
 }

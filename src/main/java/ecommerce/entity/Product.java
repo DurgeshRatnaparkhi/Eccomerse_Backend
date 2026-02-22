@@ -22,6 +22,7 @@
         private Integer quantityAvailable;
         private String brand;
         private String category;
+        private Integer stock;
 
         private String sku; // Stock Keeping Unit, e.g., "APL-IP15-256GB"
         private Double rating;

@@ -43,8 +43,8 @@ public class OrderServiceImpl implements OrderService {
             throw new CartEmptyException("Cart is empty");
         }
 
-        Address address = addressRepository.findById(request.getAddressId())
-                .orElseThrow(() -> new AddressNotFoundException("Address not found"));
+        Address address = addressRepository.findByIdAndUser(request.getAddressId(), user)
+                .orElseThrow(() -> new AddressNotFoundException("Address Invalid"));
 
         Order order = new Order();
         order.setUser(user);
@@ -59,6 +59,10 @@ public class OrderServiceImpl implements OrderService {
         for (CartItem cartItem : cart.getItems()) {
 
             OrderItem orderItem = new OrderItem();
+
+            if (cartItem.getProduct().getStock() < cartItem.getQuantity()) {
+                throw new RuntimeException("Product " + cartItem.getProduct().getName() + " is out of stock");
+            }
             orderItem.setOrder(order);
             orderItem.setProduct(cartItem.getProduct());
             orderItem.setQuantity(cartItem.getQuantity());
@@ -75,7 +79,7 @@ public class OrderServiceImpl implements OrderService {
         }
 
         order.setItems(orderItems);
-        order.setTotalAmount(totalAmount.doubleValue());
+        order.setTotalAmount(totalAmount);
 
         Order savedOrder = orderRepository.save(order);
 
@@ -111,5 +115,6 @@ public class OrderServiceImpl implements OrderService {
                                 addr.getPincode())
                 .items(itemDTOs)
                 .build();
+
     }
 }

@@ -33,21 +33,23 @@
 
     <Loggers>
 
-        <!-- ================= Application Logs ================= -->
+        <!-- Application Logs -->
         <Logger name="ecommerce" level="INFO" additivity="false">
             <AppenderRef ref="Console"/>
             <AppenderRef ref="FileLogger"/>
         </Logger>
 
-        <!-- ================= Framework Logs ================= -->
+        <!-- Framework Logs -->
         <Logger name="org.hibernate.SQL" level="WARN"/>
         <Logger name="org.springframework" level="INFO"/>
 
-        <!-- ================= Root Logger ================= -->
-        <Root level="WARN">
+        <!-- Root Logger -->
+        <Root level="INFO">
             <AppenderRef ref="Console"/>
+            <AppenderRef ref="FileLogger"/>
         </Root>
 
     </Loggers>
+
 
 </Configuration>

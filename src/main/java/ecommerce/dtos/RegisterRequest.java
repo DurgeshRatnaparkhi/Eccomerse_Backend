@@ -22,7 +22,6 @@ public class RegisterRequest {
 
     @NotBlank(message = "Email is required")
     @Email(message = "Email should be valid")
-    @UniqueElements
     private String email;
 
     @NotBlank(message = "Password is required")

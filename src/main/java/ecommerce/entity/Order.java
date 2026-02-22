@@ -2,6 +2,8 @@ package ecommerce.entity;
 
 import jakarta.persistence.*;
 import lombok.Data;
+
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -15,7 +17,7 @@ public class Order {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private Double totalAmount;
+    private BigDecimal totalAmount;
 
     private String status;          // PLACED, SHIPPED, DELIVERED
     private String paymentStatus;   // PENDING, SUCCESS, FAILED
