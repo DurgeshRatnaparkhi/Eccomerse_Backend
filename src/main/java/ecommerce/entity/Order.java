@@ -1,5 +1,7 @@
 package ecommerce.entity;
 
+import ecommerce.enumm.OrderStatus;
+import ecommerce.enumm.PaymentStatus;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -18,12 +20,15 @@ public class Order {
     private Long id;
 
     private BigDecimal totalAmount;
-
-    private String status;          // PLACED, SHIPPED, DELIVERED
-    private String paymentStatus;   // PENDING, SUCCESS, FAILED
     private String paymentId;
 
     private LocalDateTime orderDate;
+
+    @Enumerated( EnumType.STRING)
+    private OrderStatus orderStatus;
+
+    @Enumerated(EnumType.STRING)
+    private PaymentStatus paymentStatus;
 
     @ManyToOne
     @JoinColumn(name = "address_id")

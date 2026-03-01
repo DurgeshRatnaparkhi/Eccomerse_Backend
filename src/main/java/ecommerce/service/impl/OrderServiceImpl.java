@@ -4,6 +4,8 @@ import ecommerce.dtos.OrderItemResponseDTO;
 import ecommerce.dtos.OrderResponseDTO;
 import ecommerce.dtos.PlaceOrderRequestDTO;
 import ecommerce.entity.*;
+import ecommerce.enumm.OrderStatus;
+import ecommerce.enumm.PaymentStatus;
 import ecommerce.exception.AddressNotFoundException;
 import ecommerce.exception.CartEmptyException;
 import ecommerce.repo.AddressRepository;
@@ -53,8 +55,8 @@ public class OrderServiceImpl implements OrderService {
         order.setUser(user);
         order.setAddress(address);
         order.setOrderDate(LocalDateTime.now());
-        order.setStatus("PLACED");
-        order.setPaymentStatus("PENDING");
+        order.setOrderStatus(OrderStatus.CREATED);
+        order.setPaymentStatus(PaymentStatus.PENDING);
 
         List<OrderItem> orderItems = new ArrayList<>();
         BigDecimal totalAmount = BigDecimal.ZERO;
@@ -109,7 +111,7 @@ public class OrderServiceImpl implements OrderService {
         return OrderResponseDTO.builder()
                 .orderId(order.getId())
                 .orderDate(order.getOrderDate())
-                .status(order.getStatus())
+                .status(order.getOrderStatus())
                 .totalAmount(order.getTotalAmount())
                 .deliveryAddress(
                         addr.getStreet() + ", " +

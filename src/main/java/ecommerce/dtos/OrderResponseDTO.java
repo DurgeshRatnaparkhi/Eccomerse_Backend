@@ -1,5 +1,6 @@
 package ecommerce.dtos;
 
+import ecommerce.enumm.OrderStatus;
 import lombok.Builder;
 import lombok.Data;
 
@@ -12,7 +13,7 @@ import java.util.List;
 public class OrderResponseDTO {
     private Long orderId;
     private LocalDateTime orderDate;
-    private String status;
+    private OrderStatus status;
     private BigDecimal totalAmount;
     private String deliveryAddress;
     private List<OrderItemResponseDTO> items;
