@@ -11,6 +11,7 @@ import ecommerce.repo.CartRepository;
 import ecommerce.repo.OrderRepository;
 import ecommerce.service.OrderService;
 import jakarta.transaction.Transactional;
+import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -22,7 +23,7 @@ import java.util.List;
 
 
 @Service
-@RequiredArgsConstructor
+@AllArgsConstructor
 @Slf4j
 @Transactional
 public class OrderServiceImpl implements OrderService {
@@ -30,6 +31,8 @@ public class OrderServiceImpl implements OrderService {
     private final CartRepository cartRepository;
     private final OrderRepository orderRepository;
     private final AddressRepository addressRepository;
+
+
 
     @Override
     public OrderResponseDTO placeOrder(User user, PlaceOrderRequestDTO request) {

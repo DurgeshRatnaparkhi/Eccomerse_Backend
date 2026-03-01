@@ -35,4 +35,9 @@ public class Order {
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItem> items;
+
+    @PrePersist
+    public void onCreate() {
+        this.orderDate = LocalDateTime.now();
+    }
 }

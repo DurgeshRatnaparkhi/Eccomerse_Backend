@@ -2,10 +2,14 @@ package ecommerce.entity;
 
 
 import jakarta.persistence.*;
+import lombok.*;
 import lombok.Data;
 
 @Entity
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class Address {
 
     @Id
@@ -19,7 +23,7 @@ public class Address {
     private String state;
     private String pincode;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private User user;
 }
