@@ -49,7 +49,9 @@ public class SecurityConfig {
                         ).permitAll()
                         // USER CART URLs
                         .requestMatchers("/api/cart/**").hasRole("USER")
+                        .requestMatchers("/api/orders/**").hasRole("USER")
 
+                        //public product listing
                         .requestMatchers("/api/public/**").permitAll()
 
 

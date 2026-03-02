@@ -21,8 +21,8 @@ public class Order {
 
     private BigDecimal totalAmount;
     private String paymentId;
-
     private LocalDateTime orderDate;
+    private String razorpayOrderId;
 
     @Enumerated( EnumType.STRING)
     private OrderStatus orderStatus;

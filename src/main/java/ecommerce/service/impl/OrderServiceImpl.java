@@ -1,8 +1,11 @@
 package ecommerce.service.impl;
 
+import com.razorpay.RazorpayClient;
+import com.razorpay.RazorpayException;
 import ecommerce.dtos.OrderItemResponseDTO;
 import ecommerce.dtos.OrderResponseDTO;
 import ecommerce.dtos.PlaceOrderRequestDTO;
+import ecommerce.dtos.RazorpayOrderResponse;
 import ecommerce.entity.*;
 import ecommerce.enumm.OrderStatus;
 import ecommerce.enumm.PaymentStatus;
@@ -16,6 +19,8 @@ import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.json.JSONObject;
+import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -33,6 +38,7 @@ public class OrderServiceImpl implements OrderService {
     private final CartRepository cartRepository;
     private final OrderRepository orderRepository;
     private final AddressRepository addressRepository;
+    private final RazorpayClient razorpayClient;
 
 
 
@@ -122,4 +128,48 @@ public class OrderServiceImpl implements OrderService {
                 .build();
 
     }
+
+    public RazorpayOrderResponse createRazorpayOrder(User user, Long addressId) throws RazorpayException {
+
+        Cart cart = cartRepository.findByUserId(user.getId())
+                .orElseThrow(() -> new CartEmptyException("Cart not found"));
+
+        if (cart.getItems().isEmpty()) {
+            throw new CartEmptyException("Cart is empty");
+        }
+
+        Address address = addressRepository.findByIdAndUser(addressId, user)
+                .orElseThrow(() -> new AddressNotFoundException("Invalid address"));
+
+        BigDecimal totalAmount = cart.getItems().stream()
+                .map(item -> item.getProduct().getPrice()
+                        .multiply(BigDecimal.valueOf(item.getQuantity())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        Order order = new Order();
+        order.setUser(user);
+        order.setAddress(address);
+        order.setOrderStatus(OrderStatus.CREATED);
+        order.setPaymentStatus(PaymentStatus.PENDING);
+        order.setTotalAmount(totalAmount);
+
+        Order savedOrder = orderRepository.save(order);
+
+        JSONObject options = new JSONObject();
+        options.put("amount", totalAmount.multiply(BigDecimal.valueOf(100)));
+        options.put("currency", "INR");
+        options.put("receipt", "order_" + savedOrder.getId());
+
+        com.razorpay.Order razorpayOrder = razorpayClient.orders.create(options);
+
+        savedOrder.setRazorpayOrderId(razorpayOrder.get("id"));
+        orderRepository.save(savedOrder);
+
+        return new RazorpayOrderResponse(
+                savedOrder.getId(),
+                razorpayOrder.get("id").toString(),
+                totalAmount
+        );
+    }
 }
+
