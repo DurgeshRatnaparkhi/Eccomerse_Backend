@@ -22,7 +22,8 @@
         private Integer quantityAvailable;
         private String brand;
         private String category;
-        private Integer stock;
+        @Column(nullable = false)
+        private Integer stock = 0;
 
         private String sku; // Stock Keeping Unit, e.g., "APL-IP15-256GB"
         private Double rating;
