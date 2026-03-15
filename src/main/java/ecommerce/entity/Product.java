@@ -19,7 +19,6 @@
         private String name;
         private String description;
         private BigDecimal price;
-        private Integer quantityAvailable;
         private String brand;
         private String category;
         @Column(nullable = false)

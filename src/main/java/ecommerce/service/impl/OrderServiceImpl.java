@@ -2,10 +2,7 @@ package ecommerce.service.impl;
 
 import com.razorpay.RazorpayClient;
 import com.razorpay.RazorpayException;
-import ecommerce.dtos.OrderItemResponseDTO;
-import ecommerce.dtos.OrderResponseDTO;
-import ecommerce.dtos.PlaceOrderRequestDTO;
-import ecommerce.dtos.RazorpayOrderResponse;
+import ecommerce.dtos.*;
 import ecommerce.entity.*;
 import ecommerce.enumm.OrderStatus;
 import ecommerce.enumm.PaymentStatus;
@@ -29,6 +26,7 @@ import java.util.List;
 @Service
 @AllArgsConstructor
 @Slf4j
+
 @Transactional
 public class OrderServiceImpl implements OrderService {
 
@@ -181,5 +179,68 @@ public class OrderServiceImpl implements OrderService {
                                 addr.getPincode())
                 .items(itemDTOs)
                 .build();
+    }
+
+    public void createOrderAfterPayment(PaymentRequest request){
+
+        log.info(" Creating order after successful payment for razorpayOrderId={}", request.getRazorpayOrderId());
+
+        Order order = orderRepository.findByRazorpayOrderId(request.getRazorpayOrderId())
+                .orElseThrow(() -> new RuntimeException(" Order not found"));
+
+        User user = order.getUser();
+
+        Cart cart = cartRepository.findByUser(user).
+                orElseThrow(() -> new RuntimeException("Cart not found"));
+
+
+        List<OrderItem> orderItems = order.getItems();
+
+        if(orderItems == null){
+            orderItems = new ArrayList<>();
+            order.setItems(orderItems);
+        }
+
+        for(CartItem cartItem : cart.getItems()){
+
+            Product product = cartItem.getProduct();
+
+            OrderItem orderItem = new OrderItem();
+
+            orderItem.setOrder(order);
+            orderItem.setProduct(product);
+            orderItem.setQuantity(cartItem.getQuantity());
+            orderItem.setPrice(product.getPrice());
+
+            BigDecimal total =
+                    product.getPrice().multiply(BigDecimal.valueOf(cartItem.getQuantity()));
+
+            orderItem.setTotalPrice(total);
+
+            orderItems.add(orderItem);
+        }
+
+        order.setItems(orderItems);
+
+        order.setPaymentStatus(PaymentStatus.SUCCESS);
+        order.setOrderStatus(OrderStatus.PLACED);
+        order.setPaymentId(request.getRazorpayPaymentId());
+
+        orderRepository.save(order);
+
+        // clear cart
+        cart.getItems().clear();
+
+        log.info("Payment verified and order placed successfully orderId={}", order.getId());
+    }
+
+    @Override
+    public List<OrderResponseDTO> getMyOrders(User user) {
+
+        List<Order> orders = orderRepository.findByUser(user);
+
+        return orders.stream()
+                .map(this::mapToOrderResponseDTO)
+                .toList();
     }
 }

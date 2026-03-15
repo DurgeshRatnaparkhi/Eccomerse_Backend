@@ -7,6 +7,7 @@ import lombok.Data;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 
@@ -23,6 +24,7 @@ public class Order {
     private String paymentId;
     private LocalDateTime orderDate;
     private String razorpayOrderId;
+    private String status;
 
     @Enumerated( EnumType.STRING)
     private OrderStatus orderStatus;
@@ -39,10 +41,12 @@ public class Order {
     private User user;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OrderItem> items;
+    private List<OrderItem> items= new ArrayList<>();
 
     @PrePersist
     public void onCreate() {
         this.orderDate = LocalDateTime.now();
     }
+
+
 }
