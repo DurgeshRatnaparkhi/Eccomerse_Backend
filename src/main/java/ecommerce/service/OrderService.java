@@ -20,7 +20,9 @@ public interface OrderService {
     List<OrderResponseDTO> getMyOrders(User user);
 
 
+    OrderResponseDTO getOrderById(Long id, User user);
 
+    void cancelOrder(Long id, User user);
 }
 
 

@@ -8,6 +8,7 @@ import ecommerce.enumm.OrderStatus;
 import ecommerce.enumm.PaymentStatus;
 import ecommerce.exception.AddressNotFoundException;
 import ecommerce.exception.CartEmptyException;
+import ecommerce.exception.OrderNotFoundException;
 import ecommerce.repo.AddressRepository;
 import ecommerce.repo.CartRepository;
 import ecommerce.repo.OrderRepository;
@@ -205,6 +206,14 @@ public class OrderServiceImpl implements OrderService {
 
             Product product = cartItem.getProduct();
 
+            // check stock
+            if(product.getStock() < cartItem.getQuantity()){
+                throw new RuntimeException(product.getName()+" out of stock");
+            }
+
+            // decrease stock
+            product.setStock(product.getStock() - cartItem.getQuantity());
+
             OrderItem orderItem = new OrderItem();
 
             orderItem.setOrder(order);
@@ -230,6 +239,7 @@ public class OrderServiceImpl implements OrderService {
 
         // clear cart
         cart.getItems().clear();
+        cart.setTotalAmount(BigDecimal.ZERO);
 
         log.info("Payment verified and order placed successfully orderId={}", order.getId());
     }
@@ -242,5 +252,47 @@ public class OrderServiceImpl implements OrderService {
         return orders.stream()
                 .map(this::mapToOrderResponseDTO)
                 .toList();
+    }
+
+    public OrderResponseDTO getOrderById(Long id, User user) {
+
+        Order order = orderRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+
+        // 🔐 SECURITY CHECK
+        if (!order.getUser().getId().equals(user.getId())) {
+            throw new RuntimeException("Unauthorized access");
+        }
+
+        return mapToOrderResponseDTO(order); // ✅ SINGLE OBJECT
+    }
+
+
+    public void cancelOrder(Long id, User user) {
+
+        Order order = orderRepository.findById(id)
+                .orElseThrow(() -> new OrderNotFoundException("Order not found"));
+
+        // 🔐 Check ownership
+        if (!order.getUser().getId().equals(user.getId())) {
+            throw new RuntimeException("Unauthorized");
+        }
+
+        // ❌ Cannot cancel after shipping
+        if (order.getOrderStatus() == OrderStatus.SHIPPED ||
+                order.getOrderStatus() == OrderStatus.DELIVERED) {
+            throw new RuntimeException("Order cannot be cancelled now");
+        }
+
+        // 🔄 Restore stock
+        for (OrderItem item : order.getItems()) {
+            Product product = item.getProduct();
+            product.setStock(product.getStock() + item.getQuantity());
+        }
+
+        // 🔴 Update status
+        order.setOrderStatus(OrderStatus.CANCELLED);
+
+        orderRepository.save(order);
     }
 }

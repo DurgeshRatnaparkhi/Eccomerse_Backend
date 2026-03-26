@@ -11,6 +11,8 @@ import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.*;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -58,11 +60,11 @@ public class ProductService {
 
         Product product = modelMapper.map(productDto, Product.class);
 
-        // ✅ Ensure stock is set
         if(productDto.getStock() != null){
             product.setStock(productDto.getStock());
+        }else{
+            product.setStock(0);
         }
-
         product.setUser(user);
         product.setCreatedAt(LocalDateTime.now());
         product.setUpdatedAt(LocalDateTime.now());
@@ -96,6 +98,7 @@ public class ProductService {
     // ===============================
     // UPDATE PRODUCT
     // ===============================
+
 
     @Transactional
     public ProductDto updateProduct(Long id, ProductDto productDto, MultipartFile imageFile) {
@@ -141,14 +144,18 @@ public class ProductService {
     // GET ALL PRODUCTS
     // ===============================
 
+
     @Transactional(readOnly = true)
     public List<ProductDto> getAllProducts() {
+
+        logger.info("fetching all products from database");
 
         return productRepository.findAll()
                 .stream()
                 .map(product -> {
                     ProductDto dto = modelMapper.map(product, ProductDto.class);
                     dto.setImageData(product.getImageData());
+                    dto.setStock(product.getStock());
                     return dto;
                 })
                 .toList();
@@ -158,8 +165,11 @@ public class ProductService {
     // GET PRODUCT BY ID
     // ===============================
 
+
     @Transactional(readOnly = true)
     public ProductDto getProductById(Long id) {
+
+        logger.info("fetching product with id {} from database", id);
 
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new ProductNotFoundException(id));
@@ -170,6 +180,7 @@ public class ProductService {
     // ===============================
     // DELETE PRODUCT
     // ===============================
+
 
     @Transactional
     public void deleteProduct(Long id) {
@@ -196,7 +207,6 @@ public class ProductService {
     // ===============================
     // SEARCH PRODUCTS
     // ===============================
-
     public Page<ProductDto> searchProducts(String keyword, int page, int size) {
 
         Pageable pageable = PageRequest.of(page, size);
@@ -204,8 +214,12 @@ public class ProductService {
         Page<Product> products = productRepository.search(keyword.toLowerCase(), pageable);
 
         return products.map(product -> {
+
             ProductDto dto = modelMapper.map(product, ProductDto.class);
+
+            dto.setStock(product.getStock());        // VERY IMPORTANT
             dto.setImageData(product.getImageData());
+
             return dto;
         });
     }
