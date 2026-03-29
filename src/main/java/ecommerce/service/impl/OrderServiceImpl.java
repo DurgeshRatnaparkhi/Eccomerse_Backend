@@ -292,7 +292,35 @@ public class OrderServiceImpl implements OrderService {
 
         // 🔴 Update status
         order.setOrderStatus(OrderStatus.CANCELLED);
+        orderRepository.save(order);
+    }
+
+
+    //get all orders for admin
+    public List<OrderResponseDTO> getAllOrders() {
+        return orderRepository.findAll().stream()
+                .map(this::mapToOrderResponseDTO)
+                .toList();
+
+    }
+
+
+    // ✅ UPDATE STATUS
+    public void updateOrderStatus(Long id, String status) {
+
+        Order order = orderRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+
+        OrderStatus newStatus = OrderStatus.valueOf(status);
+
+        // ❌ cannot update cancelled
+        if (order.getOrderStatus() == OrderStatus.CANCELLED) {
+            throw new RuntimeException("Cannot update cancelled order");
+        }
+
+        order.setOrderStatus(newStatus);
 
         orderRepository.save(order);
     }
+
 }

@@ -84,4 +84,28 @@ public class OrderController {
 
         return ResponseEntity.ok("Order cancelled successfully");
     }
+
+
+    // ================= ADMIN APIs =================
+
+    // ✅ GET ALL ORDERS (ADMIN)
+    @GetMapping("/admin/orders")
+    public ResponseEntity<?> getAllOrders() {
+
+        return ResponseEntity.ok(orderService.getAllOrders());
+    }
+
+
+    // ✅ UPDATE ORDER STATUS (ADMIN)
+    @PutMapping("/admin/orders/{id}/status")
+    public ResponseEntity<?> updateOrderStatus(
+            @PathVariable Long id,
+            @RequestParam String status) {
+
+        orderService.updateOrderStatus(id, status);
+
+        return ResponseEntity.ok("Order status updated");
+    }
+
+
 }

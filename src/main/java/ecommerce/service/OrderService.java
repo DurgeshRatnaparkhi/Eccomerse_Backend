@@ -23,6 +23,10 @@ public interface OrderService {
     OrderResponseDTO getOrderById(Long id, User user);
 
     void cancelOrder(Long id, User user);
+
+    void updateOrderStatus(Long id, String status);
+
+    List<OrderResponseDTO> getAllOrders();
 }
 
 
