@@ -24,7 +24,6 @@ public class Order {
     private String paymentId;
     private LocalDateTime orderDate;
     private String razorpayOrderId;
-    private String status;
 
     @Enumerated( EnumType.STRING)
     private OrderStatus orderStatus;

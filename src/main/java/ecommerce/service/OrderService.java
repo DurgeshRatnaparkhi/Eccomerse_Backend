@@ -27,6 +27,10 @@ public interface OrderService {
     void updateOrderStatus(Long id, String status);
 
     List<OrderResponseDTO> getAllOrders();
+
+    void handlePaymentFailure(String razorpayOrderId);
+
+    boolean verifySignature(String razorpayOrderId, String razorpayPaymentId, String razorpaySignature);
 }
 
 

@@ -13,6 +13,7 @@ import java.util.List;
 public class OrderResponseDTO {
     private Long orderId;
     private LocalDateTime orderDate;
+    private String userName;
     private OrderStatus status;
     private BigDecimal totalAmount;
     private String deliveryAddress;

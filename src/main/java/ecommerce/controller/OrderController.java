@@ -2,10 +2,12 @@ package ecommerce.controller;
 
 
 import com.razorpay.RazorpayException;
+import ecommerce.dtos.DashboardDTO;
 import ecommerce.dtos.OrderResponseDTO;
 import ecommerce.dtos.PlaceOrderRequestDTO;
 import ecommerce.entity.User;
 import ecommerce.repo.UserRepository;
+import ecommerce.service.DashboardService;
 import ecommerce.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,6 +15,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/orders")
@@ -22,6 +26,7 @@ public class OrderController {
 
     private final OrderService orderService;
     private final UserRepository userRepository;
+    private final DashboardService dashboardService;
 
     @PostMapping("/place")
     public ResponseEntity<OrderResponseDTO> placeOrder(
@@ -97,14 +102,29 @@ public class OrderController {
 
 
     // ✅ UPDATE ORDER STATUS (ADMIN)
-    @PutMapping("/admin/orders/{id}/status")
+    @PutMapping("/admin/{id}/status")
     public ResponseEntity<?> updateOrderStatus(
             @PathVariable Long id,
-            @RequestParam String status) {
+            @RequestBody Map<String, String> body) {
+
+        String status = body.get("status");
 
         orderService.updateOrderStatus(id, status);
 
-        return ResponseEntity.ok("Order status updated");
+        return ResponseEntity.ok(Map.of(
+                "message", "Order status updated successfully"
+        ));
+    }
+
+    @GetMapping("/admin/dashboard")
+    public ResponseEntity<DashboardDTO> getDashboard() {
+        return ResponseEntity.ok(dashboardService.getDashboardStatus());
+    }
+
+    @GetMapping("/admin/orders-chart")
+    public ResponseEntity<?> getOrderChart(){
+
+        return ResponseEntity.ok(dashboardService.getOrdersPerDay());
     }
 
 

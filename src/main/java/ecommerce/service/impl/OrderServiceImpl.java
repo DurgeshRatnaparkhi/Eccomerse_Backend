@@ -12,30 +12,40 @@ import ecommerce.exception.OrderNotFoundException;
 import ecommerce.repo.AddressRepository;
 import ecommerce.repo.CartRepository;
 import ecommerce.repo.OrderRepository;
+import ecommerce.service.EmailService;
 import ecommerce.service.OrderService;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
+
+import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.json.JSONObject;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
-@Service
-@AllArgsConstructor
+@RequiredArgsConstructor
 @Slf4j
-
 @Transactional
+@Service
 public class OrderServiceImpl implements OrderService {
 
     private final CartRepository cartRepository;
     private final OrderRepository orderRepository;
     private final AddressRepository addressRepository;
     private final RazorpayClient razorpayClient;
+    private final EmailService emailService;
 
+
+    @Value("${razorpay.key.secret}")
+    private String secret;
     // ======================================================
     // NORMAL ORDER (WITHOUT PAYMENT)
     // ======================================================
@@ -96,6 +106,12 @@ public class OrderServiceImpl implements OrderService {
         order.setTotalAmount(totalAmount);
 
         Order savedOrder = orderRepository.save(order);
+
+        emailService.sendEmail(
+                user.getEmail(),
+                "Order Placed Successfully",
+                "Your order #" + order.getId() + " has been placed successfully."
+        );
 
         cart.getItems().clear();
 
@@ -173,6 +189,7 @@ public class OrderServiceImpl implements OrderService {
                 .orderDate(order.getOrderDate())
                 .status(order.getOrderStatus())
                 .totalAmount(order.getTotalAmount())
+                .userName(order.getUser().getName())
                 .deliveryAddress(
                         addr.getStreet() + ", " +
                                 addr.getCity() + ", " +
@@ -186,8 +203,14 @@ public class OrderServiceImpl implements OrderService {
 
         log.info(" Creating order after successful payment for razorpayOrderId={}", request.getRazorpayOrderId());
 
+
         Order order = orderRepository.findByRazorpayOrderId(request.getRazorpayOrderId())
                 .orElseThrow(() -> new RuntimeException(" Order not found"));
+
+        if(order.getPaymentStatus() == PaymentStatus.SUCCESS){
+            log.warn("Order already processed, skipping duplicate payment");
+            return;
+        }
 
         User user = order.getUser();
 
@@ -242,6 +265,62 @@ public class OrderServiceImpl implements OrderService {
         cart.setTotalAmount(BigDecimal.ZERO);
 
         log.info("Payment verified and order placed successfully orderId={}", order.getId());
+    }
+
+    //failed payment handler
+
+    public void handlePaymentFailure(String razorpayOrderId){
+
+        log.info("Payment failed for razorpayOrderId={}", razorpayOrderId);
+
+        Order order = orderRepository.findByRazorpayOrderId(razorpayOrderId)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+
+        // 🔥 IMPORTANT FIX (DO NOT OVERRIDE SUCCESS)
+        if(order.getPaymentStatus() == PaymentStatus.SUCCESS){
+            return; // ✅ IGNORE FAILURE (already paid)
+        }
+
+        order.setPaymentStatus(PaymentStatus.FAILED);
+        order.setOrderStatus(OrderStatus.FAILED);
+
+        orderRepository.save(order);
+    }
+
+
+
+    @Override
+    public boolean verifySignature(String orderId, String paymentId, String signature) {
+
+        try {
+            String data = orderId + "|" + paymentId;
+
+            javax.crypto.Mac mac = javax.crypto.Mac.getInstance("HmacSHA256");
+            javax.crypto.spec.SecretKeySpec secretKey =
+                    new javax.crypto.spec.SecretKeySpec(secret.getBytes(), "HmacSHA256");
+
+            mac.init(secretKey);
+
+            byte[] rawHmac = mac.doFinal(data.getBytes());
+
+            String generatedSignature = bytesToHex(rawHmac);
+
+            return generatedSignature.equals(signature);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    private String bytesToHex(byte[] hash) {
+        StringBuilder hex = new StringBuilder(2 * hash.length);
+        for (byte b : hash) {
+            String s = Integer.toHexString(0xff & b);
+            if (s.length() == 1) hex.append('0');
+            hex.append(s);
+        }
+        return hex.toString();
     }
 
     @Override
@@ -313,14 +392,45 @@ public class OrderServiceImpl implements OrderService {
 
         OrderStatus newStatus = OrderStatus.valueOf(status);
 
-        // ❌ cannot update cancelled
-        if (order.getOrderStatus() == OrderStatus.CANCELLED) {
-            throw new RuntimeException("Cannot update cancelled order");
+// ❌ Block invalid transitions
+        if(order.getOrderStatus() == OrderStatus.FAILED){
+            throw new RuntimeException("Cannot update FAILED order");
+        }
+
+        if(order.getOrderStatus() == OrderStatus.CANCELLED){
+            throw new RuntimeException("Cannot update CANCELLED order");
+        }
+
+// ❌ Prevent jumping directly to SHIPPED
+        if(newStatus == OrderStatus.SHIPPED && order.getOrderStatus() != OrderStatus.PLACED){
+            throw new RuntimeException("Order must be PLACED before SHIPPING");
         }
 
         order.setOrderStatus(newStatus);
-
         orderRepository.save(order);
+
+        // ✅ SEND EMAIL BASED ON STATUS
+        if (newStatus == OrderStatus.SHIPPED) {
+
+            emailService.sendEmail(
+                    order.getUser().getEmail(),
+                    "Order Shipped",
+                    "Your order #" + order.getId() + " has been shipped."
+            );
+        }
+
+        if (newStatus == OrderStatus.DELIVERED) {
+
+            emailService.sendEmail(
+                    order.getUser().getEmail(),
+                    "Order Delivered",
+                    "Your order #" + order.getId() + " has been delivered."
+            );
+        }
+
+
     }
+
+
 
 }
