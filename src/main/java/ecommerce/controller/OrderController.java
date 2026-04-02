@@ -5,9 +5,13 @@ import com.razorpay.RazorpayException;
 import ecommerce.dtos.DashboardDTO;
 import ecommerce.dtos.OrderResponseDTO;
 import ecommerce.dtos.PlaceOrderRequestDTO;
+import ecommerce.entity.Order;
 import ecommerce.entity.User;
+import ecommerce.enumm.OrderStatus;
+import ecommerce.repo.OrderRepository;
 import ecommerce.repo.UserRepository;
 import ecommerce.service.DashboardService;
+import ecommerce.service.InvoiceService;
 import ecommerce.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +31,8 @@ public class OrderController {
     private final OrderService orderService;
     private final UserRepository userRepository;
     private final DashboardService dashboardService;
+    private final OrderRepository orderRepository;
+    private final InvoiceService invoiceService;
 
     @PostMapping("/place")
     public ResponseEntity<OrderResponseDTO> placeOrder(
@@ -127,5 +133,22 @@ public class OrderController {
         return ResponseEntity.ok(dashboardService.getOrdersPerDay());
     }
 
+
+    @GetMapping("/invoice/{orderId}")
+    public ResponseEntity<byte[]> downloadInvoice(@PathVariable Long orderId) {
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("Order not found"));
+
+        if(order.getOrderStatus() != OrderStatus.PLACED){
+            throw new RuntimeException("Invoice available only for placed orders");
+        }
+
+        byte[] pdf = invoiceService.generateInvoice(order);
+
+        return ResponseEntity.ok()
+                .header("Content-Disposition", "attachment; filename=invoice.pdf")
+                .body(pdf);
+    }
 
 }

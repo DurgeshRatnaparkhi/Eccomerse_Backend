@@ -13,6 +13,7 @@ import ecommerce.repo.AddressRepository;
 import ecommerce.repo.CartRepository;
 import ecommerce.repo.OrderRepository;
 import ecommerce.service.EmailService;
+import ecommerce.service.InvoiceService;
 import ecommerce.service.OrderService;
 import jakarta.transaction.Transactional;
 import lombok.AllArgsConstructor;
@@ -42,6 +43,7 @@ public class OrderServiceImpl implements OrderService {
     private final AddressRepository addressRepository;
     private final RazorpayClient razorpayClient;
     private final EmailService emailService;
+    private final InvoiceService invoiceService;
 
 
     @Value("${razorpay.key.secret}")
@@ -265,6 +267,15 @@ public class OrderServiceImpl implements OrderService {
         cart.setTotalAmount(BigDecimal.ZERO);
 
         log.info("Payment verified and order placed successfully orderId={}", order.getId());
+
+        // ✅ GENERATE INVOICE
+        byte[] invoice = invoiceService.generateInvoice(order);
+
+      // ✅ SEND EMAIL
+        emailService.sendInvoiceEmail(
+                order.getUser().getEmail(),
+                invoice
+        );
     }
 
     //failed payment handler
