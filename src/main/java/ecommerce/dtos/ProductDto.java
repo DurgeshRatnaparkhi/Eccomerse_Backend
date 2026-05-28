@@ -13,7 +13,7 @@ public class ProductDto {
     private String name;
     private String description;
     private BigDecimal price;
-    private Integer quantityAvailable;
+    private Integer stock;
     private String brand;
     private String category;
     private String sku;

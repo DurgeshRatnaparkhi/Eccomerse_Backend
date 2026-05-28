@@ -32,29 +32,33 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
 
-                        // Allow Angular preflight
+                        // ✅ PUBLIC FIRST (VERY IMPORTANT)
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-
-                        // ❗ PUBLIC image URLs
+                        .requestMatchers("/api/public/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/images/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/admin/products/getProductImage/**").permitAll()
 
-                        // Public auth API
+                        // ✅ AUTH APIs
                         .requestMatchers(
                                 "/api/auth/register",
                                 "/api/auth/login",
-                                "/api/auth/forgot-password/**"
+                                "/api/auth/forgot-password/**",
+                                "/v3/api-docs/**",
+                                "/swagger-ui/**",
+                                "/swagger-ui.html",
+                                "/test-log"
                         ).permitAll()
-                        // USER CART URLs
-                        .requestMatchers("/api/cart/**").hasRole("USER")
 
-                        .requestMatchers("/api/public/**").permitAll()
-
-
-                        // Role-based
+                        // ✅ ADMIN FIRST (specific)
+                        .requestMatchers("/api/orders/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
+
+                        // ✅ USER AFTER
+                        .requestMatchers("/api/cart/**").hasRole("USER")
+                        .requestMatchers("/api/orders/**").hasRole("USER")
                         .requestMatchers("/api/user/**").hasRole("USER")
 
+                        // ✅ ANY OTHER
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

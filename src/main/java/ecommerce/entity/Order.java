@@ -1,8 +1,13 @@
 package ecommerce.entity;
 
+import ecommerce.enumm.OrderStatus;
+import ecommerce.enumm.PaymentStatus;
 import jakarta.persistence.*;
 import lombok.Data;
+
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 
@@ -15,13 +20,16 @@ public class Order {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private Double totalAmount;
-
-    private String status;          // PLACED, SHIPPED, DELIVERED
-    private String paymentStatus;   // PENDING, SUCCESS, FAILED
+    private BigDecimal totalAmount;
     private String paymentId;
-
     private LocalDateTime orderDate;
+    private String razorpayOrderId;
+
+    @Enumerated( EnumType.STRING)
+    private OrderStatus orderStatus;
+
+    @Enumerated(EnumType.STRING)
+    private PaymentStatus paymentStatus;
 
     @ManyToOne
     @JoinColumn(name = "address_id")
@@ -32,5 +40,12 @@ public class Order {
     private User user;
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<OrderItem> items;
+    private List<OrderItem> items= new ArrayList<>();
+
+    @PrePersist
+    public void onCreate() {
+        this.orderDate = LocalDateTime.now();
+    }
+
+
 }
